@@ -21,9 +21,9 @@ while True:
     new_socket = new_conn[0]
     d = new_socket.recv(1000).decode()
 
-    print(new_conn[1]) #see if client was conencting properly
+    print(d) #see if client was conencting properly
     new_socket.sendall(res.encode())
-    if d == "\r\n\r\n":
+    if "\r\n\r\n" in d:
         break
   
     new_socket.close()
