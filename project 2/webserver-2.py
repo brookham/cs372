@@ -1,5 +1,5 @@
 import socket
-import os
+
 import mimetypes
 
 s = socket.socket()
@@ -11,38 +11,31 @@ s.bind(port)
 
 s.listen()
 
-# res = "HTTP/1.1 200 OK\r\n\
-# Content-Type: text/plain \r\n\
-# Content-Length: 6 \r\n\
-# Connection: close\r\n\r\nHello!"
 
 def parse(req):
-    end = req.find("\r\n\r\n")
-    line = req.split("\r\n")
-    # if end not in line:
-    #     print(line)
-    full_path = (line[0].split(" "))[-2]
+    full_path = req.split("HTTP")[0].split("GET")[1]
 
-    file_name = os.path.split(full_path)[-1]
+    file_name = full_path.split("/")[-1].strip()
 
-    # name, type = os.path.splitext(file_name)
     mime_type, encode = mimetypes.guess_type(file_name)
 
     try:
-        with open(req, "rb") as fp:
-            data = fp.read()
-            length = len(data)    
+        with open(file_name, "rb") as fp:
+            data = fp.read().decode("ISO-8859-1")
+            length = len(data)  
+
             res = f"HTTP/1.1 200 OK\r\n\
 Content-Type: {mime_type} \r\n\
 Content-Length: {length} \r\n\
-Connection: close\r\n\r\nHello!"
+Connection: close\r\n\r\n{data}!"
             return res
 
     except:
-        return "HTTP/1.1 404 Not Found\r\n\
+        res = "HTTP/1.1 404 Not Found\r\n\
 Content-Type: text/plain\r\n\
 Content-Length: 13\r\n\
 Connection: close\r\n\r\n404 not found"
+        return res
 
 
 
@@ -55,9 +48,11 @@ while True:
 
 
     new_socket.sendall(parse(d).encode("ISO-8859-1"))
+    new_socket.close()
 
-    if d == "\r\n\r\n":
-        new_socket.close()
+    # if "" in d:
+    #     break
+
     
 
     
