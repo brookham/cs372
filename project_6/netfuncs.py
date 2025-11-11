@@ -1,3 +1,4 @@
+
 import sys
 import json
 
@@ -5,63 +6,76 @@ def ipv4_to_value(ipv4_addr):
     """
     Convert a dots-and-numbers IP address to a single 32-bit numeric
     value of integer type. Returns an integer type.
+
+    Example:
+
+    ipv4_addr: "255.255.0.0"
+    return:    4294901760  (Which is 0xffff0000 hex)
+
+    ipv4_addr: "1.2.3.4"
+    return:    16909060  (Which is 0x01020304 hex)
     """
     ip = ipv4_addr.split(".")
     for i in range(len(ip)):
         ip[i] = int(ip[i])
 
-    result = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]
+    result = (ip[0] << 24)| (ip[1] << 16) | (ip[2] << 8) | ip[3]
     return result
-
+    
 
 def value_to_ipv4(addr):
     """
     Convert a single 32-bit numeric value of integer type to a
     dots-and-numbers IP address. Returns a string type.
-    """
-    if addr is None:
-        return None
 
-    try:
-        addr_val = int(addr) & 0xFFFFFFFF
-    except (TypeError, ValueError):
+    Example:
+
+    There is only one input value, but it is shown here in 3 bases.
+
+    addr:   0xffff0000 0b11111111111111110000000000000000 4294901760
+    return: "255.255.0.0"
+
+    addr:   0x01020304 0b00000001000000100000001100000100 16909060
+    return: "1.2.3.4"
+    """
+    if addr == None:
         return None
 
     ip = ""
-    ip += f"{(addr_val >> 24) & 0xFF}."
-    ip += f"{(addr_val >> 16) & 0xFF}."
-    ip += f"{(addr_val >> 8) & 0xFF}."
-    ip += f"{addr_val & 0xFF}"
+    ip += f"{(addr >> 24) & 0xFF}."
+    ip += f"{(addr >> 16) & 0xFF}."
+    ip += f"{(addr >> 8) & 0xff}."
+    ip += f"{addr & 0xFF}"
 
     return ip
-
 
 def get_subnet_mask_value(slash):
     """
     Given a subnet mask in slash notation, return the value of the mask
     as a single number of integer type. The input can contain an IP
     address optionally, but that part should be discarded.
+
+    Returns an integer type.
+
+    Example:
+
+    There is only one return value, but it is shown here in 3 bases.
+
+    slash:  "/16"
+    return: 0xffff0000 0b11111111111111110000000000000000 4294901760
+
+    slash:  "10.20.30.40/23"
+    return: 0xfffffe00 0b11111111111111111111111000000000 4294966784
     """
-    if slash is None:
-        return None
 
-    # Accept either '/24', '24', or 'ip/24' by taking the text after the last '/'
-    if "/" in slash:
-        bits_part = slash.rsplit("/", 1)[-1]
-    else:
-        bits_part = slash
+    subnet = int(slash[-2:])
 
-    try:
-        bits = int(bits_part)
-    except (ValueError, TypeError):
-        return None
+    mask = '1' * subnet + '0' * (32 - subnet)
 
-    if bits < 0 or bits > 32:
-        return None
+    return int(mask)
 
-    # Create mask: high `bits` ones, low (32-bits) zeros
-    mask = (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF
-    return mask
+
+
 
 
 def ips_same_subnet(ip1, ip2, slash):
@@ -69,54 +83,104 @@ def ips_same_subnet(ip1, ip2, slash):
     Given two dots-and-numbers IP addresses and a subnet mask in slash
     notation, return true if the two IP addresses are on the same
     subnet.
+
+    Returns a boolean.
+
+    FOR FULL CREDIT: this must use your get_subnet_mask_value() and
+    ipv4_to_value() functions. Don't do it with pure string
+    manipulation.
+
+    This needs to work with any subnet from /1 to /31
+
+    Example:
+
+    ip1:    "10.23.121.17"
+    ip2:    "10.23.121.225"
+    slash:  "/23"
+    return: True
+    
+    ip1:    "10.23.230.22"
+    ip2:    "10.24.121.225"
+    slash:  "/16"
+    return: False
     """
-    mask = get_subnet_mask_value(slash)
-    if mask is None:
+
+    subnet = get_subnet_mask_value(slash)
+
+    ip1 = ipv4_to_value(ip1)
+    ip2 = ipv4_to_value(ip2)
+
+    subnet_mask_1 = subnet & ip1
+    subnet_mask_2 = subnet & ip2
+
+    if subnet_mask_1 == subnet_mask_2:
+        return True
+    else:
         return False
 
-    try:
-        v1 = ipv4_to_value(ip1)
-        v2 = ipv4_to_value(ip2)
-    except Exception:
-        return False
-
-    return (v1 & mask) == (v2 & mask)
 
 
 def get_network(ip_value, netmask):
     """
     Return the network portion of an address value as integer type.
+
+    Example:
+
+    ip_value: 0x01020304
+    netmask:  0xffffff00
+    return:   0x01020300
     """
-    if ip_value is None or netmask is None:
-        return None
 
-    try:
-        iv = int(ip_value) & 0xFFFFFFFF
-        nm = int(netmask) & 0xFFFFFFFF
-    except (TypeError, ValueError):
-        return None
+    network  = ip_value & netmask
 
-    return iv & nm
-
+    return network
 
 def find_router_for_ip(routers, ip):
     """
     Search a dictionary of routers (keyed by router IP) to find which
     router belongs to the same subnet as the given IP.
+
+    Return None if no routers is on the same subnet as the given IP.
+
+    FOR FULL CREDIT: you must do this by calling your ips_same_subnet()
+    function.
+
+    Example:
+
+    [Note there will be more data in the routers dictionary than is
+    shown here--it can be ignored for this function.]
+
+    routers: {
+        "1.2.3.1": {
+            "netmask": "/24"
+        },
+        "1.2.4.1": {
+            "netmask": "/24"
+        }
+    }
+    ip: "1.2.3.5"
+    return: "1.2.3.1"
+
+
+    routers: {
+        "1.2.3.1": {
+            "netmask": "/24"
+        },
+        "1.2.4.1": {
+            "netmask": "/24"
+        }
+    }
+    ip: "1.2.5.6"
+    return: None
     """
-    if routers is None:
-        return None
 
     for router_ip, data in routers.items():
-        netmask = data.get("netmask") if isinstance(data, dict) else None
-        if netmask is None:
-            continue
+        netmask = data.get("netmask")
 
         if ips_same_subnet(router_ip, ip, netmask):
             return router_ip
 
     return None
-
 
 # Uncomment this code to have it run instead of the real main.
 # Be sure to comment it back out before you submit!
@@ -140,13 +204,11 @@ def my_tests():
 def usage():
     print("usage: netfuncs.py infile.json", file=sys.stderr)
 
-
 def read_routers(file_name):
     with open(file_name) as fp:
         json_data = fp.read()
         
     return json.loads(json_data)
-
 
 def print_routers(routers):
     print("Routers:")
@@ -168,7 +230,6 @@ def print_routers(routers):
         print(f" {router_ip:>15s}: netmask {netmask}: " \
             f"network {network_ip}")
 
-
 def print_same_subnets(src_dest_pairs):
     print("IP Pairs:")
 
@@ -181,7 +242,6 @@ def print_same_subnets(src_dest_pairs):
             print("same subnet")
         else:
             print("different subnets")
-
 
 def print_ip_routers(routers, src_dest_pairs):
     print("Routers and corresponding IPs:")
@@ -200,7 +260,6 @@ def print_ip_routers(routers, src_dest_pairs):
 
     for router_ip in sorted(router_host_map.keys()):
         print(f" {router_ip:>15s}: {router_host_map[router_ip]}")
-
 
 def main(argv):
     if "my_tests" in globals() and callable(my_tests):
@@ -224,6 +283,6 @@ def main(argv):
     print()
     print_ip_routers(routers, src_dest_pairs)
 
-
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
+    
