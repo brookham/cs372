@@ -1,0 +1,55 @@
+import threading
+import time
+
+ranges = [
+    [10, 20],
+    [1, 5],
+    [70, 80],
+    [27, 92],
+    [0, 16]
+]
+
+def sums(name, start, end , result):
+    """ Thread running function. """
+
+    total = 0
+    arr = range(start, end+1)
+    for num in arr:
+        total += num
+    print(f"{name}: {total}")
+    result[int(name[-1])] = total
+    return total
+
+# We need to keep track of them so that we can join() them later. We'll
+# put all the thread references into this array
+threads = []
+
+result = [0] * len(ranges)
+
+# Launch all threads!!
+for i, rangeArr in enumerate(ranges):
+
+    # Give them a name
+    name = f"Thread{i}"
+
+    # Set up the thread object. We're going to run the function called
+    # "runner" and pass it two arguments: the thread's name and count:
+    t = threading.Thread(target=sums, args=(name, rangeArr[0], rangeArr[-1], result))
+
+    # The thread won't start executing until we call `start()`:
+    t.start()
+
+    # Keep track of this thread so we can join() it later.
+    threads.append(t)
+
+# Join all the threads back up to this, the main thread. The main thread
+# will block on the join() call until the thread is complete. If the
+# thread is already complete, the join() returns immediately.
+
+for t in threads:
+    t.join()
+
+
+sum = 0
+for num in result:
+    sum = sum + num
