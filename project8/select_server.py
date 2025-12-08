@@ -30,6 +30,7 @@ def run_server(port):
                 print(f"{s_host}, {s_port}: connected")
             else:
                 data = soc.recv(1000)
+                soc.send(data)
                 print(f"({s_host}, {s_port}) {len(data)}: {data}")
 
                 if len(data) == 0:
